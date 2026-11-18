@@ -396,6 +396,29 @@ window.mddIAMontar=function(ROOT){
     },true);
     window.mddTrava=aplica;
     aplica(window.MDD_TRAVA!==false, window.MDD_CFG);
+
+    /* checagem dos 7 dias: manda o token de sessão do próprio membro para o servidor, que pergunta
+       à Waid quem é o dono dele e confere a data da compra. Só volta a config se liberar.
+       Qualquer falha deixa travado. */
+    (function(){
+      var ck={};
+      document.cookie.split(';').forEach(function(p){
+        var i=p.indexOf('='); if(i<1)return;
+        try{ck[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1))}catch(e){}
+      });
+      if(!ck.access_token||!ck.api_key||!window.fetch)return;
+      /* já liberou nesta sessão de navegador: não chama o servidor de novo. Travado não é guardado. */
+      var CHAVE='mdd-ia-liberado';
+      try{var salvo=JSON.parse(sessionStorage.getItem(CHAVE)||'null'); if(salvo&&salvo.cfg){aplica(false,salvo.cfg);return}}catch(e){}
+      fetch('https://bzbrunxmltnzwwhzxkfo.supabase.co/functions/v1/ia-donos-trava',{
+        method:'POST', credentials:'omit', headers:{'content-type':'application/json'},
+        body:JSON.stringify({t:ck.access_token,k:ck.api_key})
+      }).then(function(r){return r.json()}).then(function(d){
+        if(!(d&&d.liberado===true&&d.cfg))return;
+        try{sessionStorage.setItem(CHAVE,JSON.stringify({cfg:d.cfg}))}catch(e){}
+        aplica(false,d.cfg);
+      }).catch(function(){});
+    })();
   })();
 };
 [].forEach.call(document.querySelectorAll(".mdd-ia-raiz"),function(r){window.mddIAMontar(r)});
