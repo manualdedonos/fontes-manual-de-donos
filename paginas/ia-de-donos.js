@@ -11,9 +11,22 @@ window.mddIAMontar=function(ROOT){
 
   /* margem lateral: mede quanto respiro a Waid já dá em volta da seção e o CSS completa o resto */
   (function(){
-    function mede(){var r=ROOT.getBoundingClientRect(),g=Math.max(0,document.documentElement.clientWidth-r.right);ROOT.style.setProperty('--waid-gut',Math.round(g)+'px')}
-    mede(); addEventListener('resize',mede,{passive:true}); setTimeout(mede,800);
+    function mede(){
+      if(!ROOT.isConnected){if(ro)ro.disconnect();return}
+      var r=ROOT.getBoundingClientRect(); if(r.width<200)return; /* seção escondida ou em transição: mede depois */
+      ROOT.style.setProperty('--waid-gut',Math.round(Math.max(0,document.documentElement.clientWidth-r.right))+'px');
+    }
+    var ro=window.ResizeObserver?new ResizeObserver(mede):null;
+    if(ro){ro.observe(ROOT);ro.observe(document.documentElement)}else{addEventListener('resize',mede,{passive:true})}
+    mede(); setTimeout(mede,800);
   })();
+
+  /* atalhos internos (#instalar, #agentes): rola na própria página, sem mexer no endereço da Waid */
+  ROOT.addEventListener('click',function(ev){
+    var a=ev.target.closest&&ev.target.closest('a[href^="#"]'); if(!a||!ROOT.contains(a))return;
+    var alvo=a.getAttribute('href').length>1&&ROOT.querySelector(a.getAttribute('href')); if(!alvo)return;
+    ev.preventDefault(); alvo.scrollIntoView({behavior:'smooth',block:'start'});
+  });
 
 
   /* entrada suave */
@@ -308,6 +321,7 @@ window.mddIAMontar=function(ROOT){
     var st=document.createElement('style');
     st.textContent=[
       '#mdd-ia .kdk-cadeado,#mdd-ia .ag-c__breve{display:none}',
+      '#mdd-ia.is-checando .kdk-trava{visibility:hidden}',
       '#mdd-ia .kdk-trava{display:flex;align-items:center;gap:12px;margin:14px 0;padding:14px 16px;border-radius:14px;background:#3A080C;color:#FFF1DF}',
       '#mdd-ia .kdk-trava__ic{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#FD4434;color:#FFF1DF}',
       '#mdd-ia .kdk-trava__ic .ic{width:16px;height:16px}',
