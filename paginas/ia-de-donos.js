@@ -307,9 +307,10 @@ window.mddIAMontar=function(ROOT){
   })});
 
   /* trava de 7 dias (cadeado leve).
-     >>> LIGA/DESLIGA: NÃO É AQUI. A chave única é TRAVA_7D_ATIVA no servidor
-         (dash-manual: supabase/functions/_shared/trava7d.ts). Com ela em false, todo membro
-         da Waid recebe a config e esta página abre liberada sozinha. Este arquivo não muda.
+     >>> LIGA/DESLIGA: NÃO É AQUI. A chave única é o secret IA_DONOS_TRAVA da edge function
+         ia-donos-trava (Supabase bzbrunxmltnzwwhzxkfo; doc em dash-manual _shared/trava7d.ts).
+         "ligada" = trava; ausente/outro valor = qualquer visitante recebe a config e a página
+         abre liberada, com ou sem cookie (celular/app). Este arquivo não muda.
      Regra de copy (Bechi e Ju, 18/11): nada de "travado" nem "garantia". É ansiedade de liberação,
      não proibição. Só o download do agente fica bloqueado; filtros e o exemplo para copiar seguem livres.
      A config (catálogo, repositório, pasta, prints) não mora neste arquivo: chega do servidor no liberar.
@@ -419,7 +420,9 @@ window.mddIAMontar=function(ROOT){
       var i=p.indexOf('='); if(i<1)return;
       try{ck[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1))}catch(e){}
     });
-    if(!ck.access_token||!ck.api_key||!window.fetch){aplica(true);return}
+    /* sem cookie (app/celular) também pergunta ao servidor: com a trava desligada ele libera qualquer um;
+       com ela ligada, sem token ele recusa e a página fica travada, como antes. */
+    if(!window.fetch){aplica(true);return}
     /* já liberou nesta sessão de navegador: não chama o servidor de novo. Travado não é guardado. */
     var CHAVE='mdd-ia-liberado';
     try{var salvo=JSON.parse(sessionStorage.getItem(CHAVE)||'null'); if(salvo&&salvo.cfg){aplica(false,salvo.cfg);return}}catch(e){}
@@ -427,7 +430,7 @@ window.mddIAMontar=function(ROOT){
     var decidiu=0, limite=setTimeout(function(){if(!decidiu){decidiu=1;aplica(true)}},10000);
     fetch('https://bzbrunxmltnzwwhzxkfo.supabase.co/functions/v1/ia-donos-trava',{
       method:'POST', credentials:'omit', headers:{'content-type':'application/json'},
-      body:JSON.stringify({t:ck.access_token,k:ck.api_key})
+      body:JSON.stringify({t:ck.access_token||'',k:ck.api_key||''})
     }).then(function(r){return r.json()}).then(function(d){
       if(decidiu&&!(d&&d.liberado===true&&d.cfg))return;
       decidiu=1; clearTimeout(limite);
